@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Forensics Python Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <!-- Panou Forensics Principal -->
+    <div class="forensics-panel" id="forensicsPanel">
+        <!-- Miniatura principală + toate miniaturile secundare vor fi generate dinamic -->
+        <div id="mainScript" class="miniature main-script hidden">
+            <input type="text" class="mini-filename" readonly>
+            <div class="mini-content"></div>
+        </div>
+        <!-- SVG trebuie să fie ultimul ca să fie "în față" -->
+        <svg id="svgConnections"></svg>
+    </div>
+
+    <!-- Sidebar Dreapta -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="row">
+                <input type="file" accept=".py" id="mainInput" class="hidden">
+                <button id="browseMain" title="Selectează script principal">Browse principal</button>
+                <button id="loadMain" title="Încarcă script principal">Încarcă principal</button>
+            </div>
+            <div class="progress-row">
+                <progress id="progressMain" value="0" max="100"></progress>
+            </div>
+            <div class="row">
+                <input type="file" accept=".py" id="secInput" class="hidden" multiple>
+                <button id="browseSec" title="Selectează scripturi secundare">Browse secundar</button>
+                <button id="loadSec" title="Încarcă scripturi secundare">Încarcă secundar</button>
+            </div>
+            <div class="sec-progress-grid" id="secProgressGrid"></div>
+            <div class="row log-row">
+                <div id="messageLog" class="message-log"></div>
+                <button id="resetBtn" title="Reset" class="reset-btn">🧽</button>
+                <button id="pinBtn" title="Mod Pin (Conexiuni)" class="pin-btn">📌</button>
+            </div>
+        </div>
+        <div class="sidebar-bottom">
+            <label for="raportBox" class="raport-label">Afisaj raport</label>
+            <textarea id="raportBox" readonly></textarea>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pentru magnify -->
+<div id="modal" class="modal hidden">
+    <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <input type="text" class="modal-filename" readonly>
+        <pre class="modal-text"></pre>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
