@@ -28,7 +28,7 @@ forensics-dashboard
 - **Analiza automată a importurilor**: detectează relațiile de import dintre scripturi folosind logica backendului Flask.
 - **Vizualizare grafică**: prezintă relațiile detectate sub formă de conexiuni grafice interactive (linii și miniaturi dinamice).
 - **Raport automat**: generează și afișează un raport clar privind importurile și relațiile dintre scripturi.
-- **Interfață prietenoasă**: design modern și intuitiv cu feedback vizual clar și controale ușor accesibile.
+- **Interfață prietenoasă**: intuitiv cu feedback vizual clar și controale ușor accesibile.
 
 ## Tehnologii utilizate
 
@@ -56,5 +56,5 @@ Proiectul este deschis pentru contribuții și îmbunătățiri. Orice feedback,
 
 ## Autor
 
-Creat de [Numele Tău] - [Link către profil GitHub sau altă pagină personală]
+Creat de OdacaICT - https://github.com/odacaict/
 
