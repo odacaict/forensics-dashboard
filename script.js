@@ -90,7 +90,39 @@ loadMain.onclick = () => {
         progressMain.value = 100;
         showMainScriptPreview(mainScriptFile.name, mainScriptData);
         showMsg('Script principal încărcat cu succes!', "#229966");
+
+        const lines = mainScriptData.split('\n');
+        const functions = lines.filter(l => l.trim().startsWith('def'));
+        const classes = lines.filter(l => l.trim().startsWith('class'));
+
+        let raport = `Script principal **${mainScriptFile.name}** contine :\n`;
+        raport += `1. Functii (${functions.length}):\n`;
+        functions.forEach((f, i) => raport += `${String.fromCharCode(97 + i)}) ${f.trim()}\n`);
+
+        raport += `\n2. Clase (${classes.length}):\n`;
+        classes.forEach((c, i) => raport += `${String.fromCharCode(97 + i)}) ${c.trim()}\n`);
+
+        raportBox.innerText = raport;
+
+        // === AICI trimiți la backend Flask numele fără .py ===
+        const numeFaraExt = mainScriptFile.name.replace(/\.py$/, '');
+
+        fetch('http://localhost:5000/set_principal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: numeFaraExt })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "ok") {
+                showMsg(`✔️ Denumirea '${numeFaraExt}' a fost salvată pe server!`, "#229966");
+            } else {
+                showMsg("❌ Eroare la salvare pe server: " + data.message, "#ff2929");
+            }
+        })
+        .catch(() => showMsg("❌ Eroare de rețea la trimiterea către Flask!", "#ff2929"));
     };
+
     reader.onerror = () => {
         showMsg('❌ Eroare la citirea fișierului principal!', "#ff2929");
     };
@@ -120,7 +152,7 @@ secInput.onchange = () => {
 
 loadSec.onclick = () => {
     if (!secScriptFiles.length) {
-        showMsg('⚠️ Selectează fișiere secundare!', "#ff2929");
+        showMsg(`⚠️ Selectează fișiere secundare!`, "#ff2929");
         return;
     }
     secScriptData = [];
@@ -130,8 +162,40 @@ loadSec.onclick = () => {
         if (idx >= secScriptFiles.length) {
             showMsg(`Toate fișierele secundare au fost încărcate!`, "#229966");
             showSecScriptsPreview();
-            return;
+
+            // RAPORT pentru secundare
+            let raport = `Fisierele secundare: ${secScriptData.map(f => f.name).join(', ')}\nContin importurile:\n`;
+
+            secScriptData.forEach(f => {
+                const lines = f.content.split('\n');
+                const imports = lines.filter(l => l.trim().startsWith('import') || l.trim().startsWith('from'));
+                raport += `${f.name} (${imports.length}):\n`;
+                imports.forEach((imp, i) => raport += `${String.fromCharCode(97 + i)}) ${imp.trim()}\n`);
+                raport += '\n';
+            });
+
+            raportBox.innerText = raport;
+
+            // === UPLOAD SECUNDARE PE BACKEND ===
+            const formData = new FormData();
+            secScriptFiles.forEach(f => formData.append('files', f));
+            fetch('http://localhost:5000/incarca_secundare', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    showMsg(`✔️ ${data.files.length} fișiere secundare urcate pe server!`, "#229966");
+                } else {
+                    showMsg("❌ Eroare la upload: " + data.message, "#ff2929");
+                }
+            })
+            .catch(() => showMsg("❌ Eroare rețea la uploadul fișierelor secundare!", "#ff2929"));
+
+            return; // GATA
         }
+
         let f = secScriptFiles[idx];
         let reader = new FileReader();
         reader.onload = e => {
@@ -149,6 +213,7 @@ loadSec.onclick = () => {
         };
         reader.readAsText(f);
     }
+
     loadOne(0);
 };
 
@@ -187,70 +252,71 @@ function showSecScriptsPreview() {
         e.remove();
     });
     let total = secScriptData.length;
+    if (total === 0) return;
     let w = forensicsPanel.clientWidth;
     let h = forensicsPanel.clientHeight;
-    let margin = 15;
-    let boxW = 132, boxH = 115;
-
-    let topN = Math.min(35, total);
-    let bottomN = Math.min(35, total - topN);
-    let leftN = Math.min(15, total - topN - bottomN);
-    let rightN = total - topN - bottomN - leftN;
-    let positions = [];
-    for (let i = 0; i < topN; ++i) {
-        let availW = w - 2 * margin - boxW;
-        let x = margin + (availW) * (topN === 1 ? 0.5 : i / (topN-1));
+    let margin = 10;
+    // Dimensiuni miniaturi secundare
+    let boxW = 264, boxH = 230;
+    // Număr maxim pe fiecare latură (fără colțuri)
+    let maxTop = Math.floor((w - 2 * margin) / boxW);
+    let maxSide = Math.floor((h - 2 * margin) / boxH);
+    // Împărțim cât mai egal pe laturi
+    let topN = Math.min(maxTop, Math.ceil(total / 4));
+    let rightN = Math.min(maxSide, Math.ceil((total - topN) / 3));
+    let bottomN = Math.min(maxTop, Math.ceil((total - topN - rightN) / 2));
+    let leftN = total - (topN + rightN + bottomN);
+    let idx = 0;
+    // Sus (stânga -> dreapta)
+    for (let i = 0; i < topN && idx < total; ++i, ++idx) {
+        let x = margin + i * ((w - 2 * margin - boxW) / Math.max(1, topN - 1));
         let y = margin;
-        positions.push({x, y});
+        addMiniSecundar(idx, x, y);
     }
-    for (let i = 0; i < rightN; ++i) {
-        let availH = h - 2 * margin - boxH;
+    // Dreapta (sus -> jos)
+    for (let i = 0; i < rightN && idx < total; ++i, ++idx) {
         let x = w - margin - boxW;
-        let y = margin + (availH) * (rightN === 1 ? 0.5 : i / (rightN-1));
-        positions.push({x, y});
+        let y = margin + i * ((h - 2 * margin - boxH) / Math.max(1, rightN - 1));
+        addMiniSecundar(idx, x, y);
     }
-    for (let i = 0; i < bottomN; ++i) {
-        let availW = w - 2 * margin - boxW;
-        let x = margin + (availW) * (bottomN === 1 ? 0.5 : i / (bottomN-1));
+    // Jos (dreapta -> stânga)
+    for (let i = 0; i < bottomN && idx < total; ++i, ++idx) {
+        let x = w - margin - boxW - i * ((w - 2 * margin - boxW) / Math.max(1, bottomN - 1));
         let y = h - margin - boxH;
-        positions.push({x, y});
+        addMiniSecundar(idx, x, y);
     }
-    for (let i = 0; i < leftN; ++i) {
-        let availH = h - 2 * margin - boxH;
+    // Stânga (jos -> sus)
+    for (let i = 0; i < leftN && idx < total; ++i, ++idx) {
         let x = margin;
-        let y = margin + (availH) * (leftN === 1 ? 0.5 : i / (leftN-1));
-        positions.push({x, y});
+        let y = h - margin - boxH - i * ((h - 2 * margin - boxH) / Math.max(1, leftN - 1));
+        addMiniSecundar(idx, x, y);
     }
-    secScriptData.forEach((data, i) => {
+    updateAllForensicsUI();
+    function addMiniSecundar(i, x, y) {
+        let data = secScriptData[i];
         let mini = createEl('div', 'miniature sec-script');
-        mini.style.left = positions[i].x + "px";
-        mini.style.top = positions[i].y + "px";
+        mini.style.left = x + "px";
+        mini.style.top = y + "px";
         let miniid = assignMiniId();
         mini.dataset.miniid = miniid;
         miniatures[miniid] = mini;
-
         let filenameBox = createEl('input', 'mini-filename');
         filenameBox.value = data.name;
         filenameBox.setAttribute('readonly', true);
         mini.appendChild(filenameBox);
-
         let cont = createEl('div', 'mini-content');
-        cont.innerHTML = previewWordsContent(data.content, 5);
+        cont.innerHTML = previewWordsContent(data.content, 10); // 10 linii
         mini.appendChild(cont);
-
         mini.dataset.filename = data.name;
         mini.dataset.fullcontent = data.content;
-
         mini.onclick = (e) => {
             if (pinMode) handleMiniaturePinClick(mini, e);
             else showMagnify(data.name, data.content);
         };
         mini.onmouseenter = () => highlightMiniAndLines(mini, true);
         mini.onmouseleave = () => highlightMiniAndLines(mini, false);
-
         forensicsPanel.appendChild(mini);
-    });
-    updateAllForensicsUI();
+    }
 }
 
 // ========== PIN & SVG LINES ==========
@@ -433,7 +499,7 @@ function previewWordsContent(content, numLines = 5) {
 }
 
 // ======= RAPORT LOGIC ======
-function updateReport() {
+/*function updateReport() {
     let lines = [];
     if (mainScriptFile) lines.push(`Script principal: ${mainScriptFile.name}`);
     if (secScriptData.length) {
@@ -449,6 +515,18 @@ function updateReport() {
         });
     }
     raportBox.value = lines.join('\n');
+}
+*/
+
+function updateReport() {
+    fetch('raport.txt')
+        .then(response => response.text())
+        .then(text => {
+            raportBox.value = text;
+        })
+        .catch(err => {
+            raportBox.value = 'nu detectez.';
+        });
 }
 
 // ======= EVENTS & RESIZE =======
@@ -478,3 +556,37 @@ function showMagnify(filename, content) {
 }
 closeModal.onclick = () => modal.classList.add('hidden');
 modal.onclick = e => { if (e.target === modal) modal.classList.add('hidden'); }
+// === RAPORT LA START ===
+function generateImportReport() {
+    let lines = [];
+
+    // Script p1rincipal
+    if (mainScriptData && mainScriptFile) {
+        const importCount = mainScriptData.split('\n').filter(l => l.trim().startsWith('import')).length;
+        const fromCount = mainScriptData.split('\n').filter(l => l.trim().startsWith('from')).length;
+        lines.push(`Script principal: ${mainScriptFile.name}`);
+        lines.push(`  - import: ${importCount} linii`);
+        lines.push(`  - from: ${fromCount} linii`);
+        lines.push('');
+    }
+
+    // Scripturi secundare
+    secScriptData.forEach(f => {
+        const importCount = f.content.split('\n').filter(l => l.trim().startsWith('import')).length;
+        const fromCount = f.content.split('\n').filter(l => l.trim().startsWith('from')).length;
+        lines.push(`Script secundar: ${f.name}`);
+        lines.push(`  - import: ${importCount} linii`);
+        lines.push(`  - from: ${fromCount} linii`);
+        lines.push('');
+    });
+
+    raportBox.value = lines.join('\n');
+}
+el("butonStart").addEventListener("click", detectImportsFromMain);
+window.addEventListener('load', updateReport);
+window.mainScriptFile = mainScriptFile;
+window.mainScriptData = mainScriptData;
+window.secScriptData = secScriptData;
+window.raportBox = raportBox;
+window.mainScriptBox = mainScriptBox;
+window.miniatures = miniatures;
