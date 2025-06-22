@@ -1,0 +1,7 @@
+cautare.py
+contestatie.py
+doc_generator.py
+generare.py
+health.py
+ocr.py
+root.py

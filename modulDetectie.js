@@ -1,12 +1,12 @@
 (function () {
     /**
-     * Variantă NOUĂ: Analiza și conexiunile se fac pe baza răspunsului de la server (secundare.txt)
+     * Versiune îmbunătățită: Analiza detaliată cu evidențierea entităților
      */
-    function detectFromServer() {
+    function detectFromServerDetailed() {
         const raportBox = document.getElementById('raportBox');
-        raportBox.innerHTML = "Se procesează...";
+        raportBox.innerHTML = "Se procesează analiza detaliată...";
 
-        // 1. Cere backendului să scrie denumirile în secundare.txt
+        // 1. Cere backendului să analizeze și să scrie rezultatele
         fetch('http://localhost:5000/analizeaza_secundare', { method: 'POST' })
             .then(res => res.json())
             .then(data => {
@@ -14,13 +14,20 @@
                     raportBox.innerHTML = "Eroare server: " + (data.message || "");
                     return;
                 }
-                // 2. După ce s-a scris secundare.txt, îl citim
+                
+                // Salvează analiza detaliată global
+                if (window.detailedAnalysis !== undefined) {
+                    window.detailedAnalysis = data.analysis || {};
+                }
+                
+                // 2. După analiză, citește lista de fișiere care importă
                 fetch('http://localhost:5000/get_secundare')
                     .then(resp => resp.text())
                     .then(txt => {
-                        // 3. Desenează liniile/conexiunile pe baza denumirilor din secundare.txt
+                        // 3. Desenează liniile și pregătește raportul detaliat
                         const secNames = txt.trim().split('\n').map(s => s.trim()).filter(Boolean);
                         let count = 0;
+                        let detailedReport = [];
 
                         // Șterge toate conexiunile vechi
                         if (typeof window.connections !== 'undefined') window.connections = [];
@@ -32,9 +39,14 @@
                             raportBox.innerHTML = "⚠️ Script principal lipsă în UI!";
                             return;
                         }
+                        
                         const miniatures = window.miniatures || {};
+                        detailedReport.push(`<strong>Analiză detaliată importuri</strong>\n`);
+                        detailedReport.push(`Script principal: ${mainMini.dataset.filename}\n`);
+                        detailedReport.push(`═══════════════════════════════════\n`);
+                        
                         // Pentru fiecare secundar, găsește miniatura și trasează linia
-                        secNames.forEach(secName => {
+                        secNames.forEach((secName, idx) => {
                             // Caută miniatura secundară după data-filename
                             let miniSec = null;
                             for (const key in miniatures) {
@@ -47,16 +59,52 @@
                                     break;
                                 }
                             }
+                            
                             if (miniSec && typeof window.createConnection === 'function') {
                                 window.createConnection(mainMini.dataset.miniid, miniSec.dataset.miniid);
                                 count++;
                             }
+                            
+                            // Adaugă în raport detaliile despre ce importă
+                            detailedReport.push(`${idx + 1}. ${secName}`);
+                            
+                            if (data.analysis && data.analysis[secName]) {
+                                const details = data.analysis[secName];
+                                const totalImports = details.functions.length + details.classes.length;
+                                
+                                if (totalImports > 0) {
+                                    if (details.functions.length > 0) {
+                                        detailedReport.push(`   ├─ Funcții (${details.functions.length}): ${details.functions.join(', ')}`);
+                                    }
+                                    if (details.classes.length > 0) {
+                                        detailedReport.push(`   └─ Clase (${details.classes.length}): ${details.classes.join(', ')}`);
+                                    }
+                                } else {
+                                    detailedReport.push(`   └─ Importă modulul complet`);
+                                }
+                            } else {
+                                detailedReport.push(`   └─ Import detectat (detalii indisponibile)`);
+                            }
+                            
+                            detailedReport.push('');
                         });
-                        raportBox.innerHTML = `Legături detectate: ${count}\n\n${secNames.join('\n')}`;
-                        if (typeof showMsg === 'function') showMsg('✔️ Analiză importuri din secundare finalizată!', '#2cbb68');
+                        
+                        detailedReport.push(`\n───────────────────────────────────`);
+                        detailedReport.push(`Total conexiuni: ${count}`);
+                        
+                        // Afișează raportul formatat
+                        raportBox.innerHTML = detailedReport.join('\n');
+                        
+                        // Afișează mesaj de succes
+                        if (typeof showMsg === 'function') {
+                            showMsg(`✔️ Analiză completă! ${count} conexiuni detectate.`, '#2cbb68');
+                        }
+                        
+                        // Actualizează evidențierea pentru toate miniaturile vizibile
+                        updateAllHighlights();
                     })
                     .catch(() => {
-                        raportBox.innerHTML = 'Nu am putut citi secundare.txt!';
+                        raportBox.innerHTML = 'Nu am putut citi rezultatele analizei!';
                     });
             })
             .catch(() => {
@@ -64,88 +112,73 @@
             });
     }
 
-    // Vechea funcție locală, dacă vrei să o folosești pe viitor (nu mai e activă la butonul START)
-    function detectImportsFromMainLocal() {
-        const raportBox = document.getElementById('raportBox');
-
-        // 1. Miniatura principală
-        const mainMini = document.querySelector('.miniature.main-script:not(.hidden)');
-        if (!mainMini) {
-            raportBox.innerHTML = "<span style='color:red'>⚠️ Încarcă mai întâi scriptul principal!</span>";
-            return;
-        }
-        const mainFilename = mainMini.dataset.filename;    // ex: "principal.py"
-        const mainName = mainFilename.replace(/\.py$/i, '');
-        const mainContent = mainMini.dataset.fullcontent; // codul sursă
-
-        // 2. Extragem entitățile (def/class) și păstrăm primul al doilea cuvânt
-        const entities = []; // { type: 'Functia'|'Clasa', name: string }
-        mainContent.split(/\r?\n/).forEach(line => {
-            const t = line.trim();
-            if (t.startsWith('def ') || t.startsWith('class ')) {
-                const parts = t.split(/\s+/);
-                const type = parts[0] === 'def' ? 'Functia' : 'Clasa';
-                entities.push({ type, name: parts[1] });
+    /**
+     * Actualizează evidențierea pentru toate miniaturile secundare
+     */
+    function updateAllHighlights() {
+        const secMinis = document.querySelectorAll('.miniature.sec-script');
+        secMinis.forEach(mini => {
+            // Trigger re-render pentru a aplica evidențierea
+            if (mini.classList.contains('pin-hover')) {
+                const filename = mini.dataset.filename;
+                const analysis = window.detailedAnalysis && window.detailedAnalysis[filename];
+                if (analysis && typeof window.highlightImportedEntities === 'function') {
+                    window.highlightImportedEntities(mini, true);
+                }
             }
         });
-
-        // 3. Miniaturile secundare și filtrul pe linii de import
-        const secMinis = Array.from(document.querySelectorAll('.miniature.sec-script'));
-        const importedFiles = secMinis
-            .map(mini => {
-                const content = mini.dataset.fullcontent;
-                const lines = content.split(/\r?\n/);
-                // găsim liniile care încep cu import/from *și* conțin mainName (chiar cu punct înainte)
-                const imp = lines.filter(l => {
-                    const tr = l.trim();
-                    return  (tr.startsWith('import ' + mainName) ||
-                             tr.startsWith('from ' + mainName)   ||
-                             tr.startsWith('import ' + mainName + '.') ||
-                             tr.startsWith('from ' + mainName + '.'));
-                });
-                return imp.length ? { mini, imports: imp } : null;
-            })
-            .filter(x => x);
-
-        // 4. Construim raportul text
-        const reportLines = [];
-        reportLines.push(`Principal: ${mainName}`);
-        entities.forEach((e, i) => {
-            reportLines.push(`${i + 1}. ${e.type} : ${e.name}`);
-        });
-        reportLines.push('========================');
-        reportLines.push('Fisiere care fac importuri:');
-
-        if (importedFiles.length === 0) {
-            reportLines.push('Niciun fișier secundar nu importă modulul principal.');
-        } else {
-            importedFiles.forEach((item, idx) => {
-                const fname = item.mini.dataset.filename;
-                // 4.1 Pentru fiecare entitate cautăm apariția în tot codul fișierului
-                const matches = entities.filter(e => {
-                    return new RegExp(`\\b${e.name}\\b`).test(item.mini.dataset.fullcontent);
-                });
-                if (matches.length) {
-                    reportLines.push(`${idx + 1}. ${fname}, importa functia/clasa:`);
-                    matches.forEach((e, j) => {
-                        reportLines.push(`${String.fromCharCode(97 + j)}) ${e.name}`);
-                    });
-                } else {
-                    reportLines.push(`${idx + 1}. ${fname}`);
-                }
-            });
-        }
-
-        // 5. Afișăm raportul
-        raportBox.innerHTML = `<pre>${reportLines.join('\n')}</pre>`;
-        // (opțional) notificăm utilizatorul
-        if (typeof showMsg === 'function') {
-            showMsg('Raport generat cu succes!', '#2cbb68');
-        }
     }
 
-    // Setează detecția server la butonul START
-    window.detectImportsFromMain = detectFromServer;
-    // Pentru fallback sau debug:
-    window.detectImportsFromMainLocal = detectImportsFromMainLocal;
+    /**
+     * Funcție auxiliară pentru generarea unui raport sumar
+     */
+    function generateSummaryReport() {
+        const mainMini = document.querySelector('.miniature.main-script:not(.hidden)');
+        if (!mainMini || !window.detailedAnalysis) return '';
+        
+        let summary = [];
+        let totalFunctions = 0;
+        let totalClasses = 0;
+        let uniqueFunctions = new Set();
+        let uniqueClasses = new Set();
+        
+        for (const [filename, analysis] of Object.entries(window.detailedAnalysis)) {
+            totalFunctions += analysis.functions.length;
+            totalClasses += analysis.classes.length;
+            analysis.functions.forEach(f => uniqueFunctions.add(f));
+            analysis.classes.forEach(c => uniqueClasses.add(c));
+        }
+        
+        summary.push(`\n═══════════════════════════════════`);
+        summary.push(`SUMAR UTILIZARE:`);
+        summary.push(`• Total funcții importate: ${totalFunctions}`);
+        summary.push(`• Total clase importate: ${totalClasses}`);
+        summary.push(`• Funcții unice: ${uniqueFunctions.size}`);
+        summary.push(`• Clase unice: ${uniqueClasses.size}`);
+        
+        if (uniqueFunctions.size > 0) {
+            summary.push(`\nTop funcții utilizate:`);
+            let functionUsage = {};
+            for (const [filename, analysis] of Object.entries(window.detailedAnalysis)) {
+                analysis.functions.forEach(f => {
+                    functionUsage[f] = (functionUsage[f] || 0) + 1;
+                });
+            }
+            Object.entries(functionUsage)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5)
+                .forEach(([func, count]) => {
+                    summary.push(`  • ${func}: ${count} fișiere`);
+                });
+        }
+        
+        return summary.join('\n');
+    }
+
+    // Setează noua funcție de detecție
+    window.detectImportsFromMain = detectFromServerDetailed;
+    
+    // Exportă funcții auxiliare pentru debugging
+    window.updateAllHighlights = updateAllHighlights;
+    window.generateSummaryReport = generateSummaryReport;
 })();

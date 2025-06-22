@@ -232,6 +232,45 @@ progress::-webkit-progress-value {
     cursor: pointer;
     overflow: hidden;
 }
+
+/* Control bar pentru miniaturi */
+.mini-control-bar {
+    width: 100%;
+    height: 26px;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 2px 0;
+    box-sizing: border-box;
+}
+
+.mini-btn {
+    background: rgba(255,255,255,0.85);
+    border: 1px solid #333;
+    border-radius: 4px;
+    width: 24px;
+    height: 22px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    padding: 0;
+    margin: 0;
+}
+
+.mini-btn:hover {
+    background: #fff;
+    transform: scale(1.1);
+}
+
+.edit-btn:hover { background: #fffacd; }
+.save-btn:hover { background: #90ee90; }
+.refresh-btn:hover { background: #87ceeb; }
+
 .miniature .mini-filename {
     width: 98%;
     border: none;
@@ -266,6 +305,24 @@ progress::-webkit-progress-value {
     font-weight: 600;
     user-select: none;
 }
+
+/* Evidențiere entități */
+.highlight-function {
+    background-color: #ffeb3b;
+    color: #333;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.highlight-class {
+    background-color: #2196f3;
+    color: white;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
 .miniature:hover,
 .miniature.pin-hover {
     border-color: #2eebff;
@@ -288,7 +345,7 @@ progress::-webkit-progress-value {
 .connection-pin { fill: #ffe954; stroke: #dca80c; stroke-width: 2; opacity: 0.85; }
 .connection-line.selected, .connection-pin.selected { stroke: #22aaff; fill: #fffdc1 !important; opacity: 1; }
 
-/* Modal etc. (păstrează ca înainte) */
+/* Modal pentru magnify și editor */
 .modal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -312,6 +369,13 @@ progress::-webkit-progress-value {
     align-items: center;
     position: relative;
 }
+
+/* Modal în mod editor */
+.modal.editor-mode .modal-content {
+    max-width: 800px;
+    min-width: 600px;
+}
+
 .close {
     position: absolute;
     top: 12px;
@@ -345,6 +409,56 @@ progress::-webkit-progress-value {
     color: #1c2d4c;
     border: 1px solid #d7e3fc;
 }
+
+/* Editor textarea */
+.modal-editor {
+    width: 97%;
+    height: 55vh;
+    background: #f8f8f8;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    padding: 1vw;
+    border-radius: 10px;
+    border: 2px solid #2196f3;
+    color: #333;
+    resize: none;
+    tab-size: 4;
+    outline: none;
+    display: none;
+}
+
+.modal-editor:focus {
+    border-color: #1976d2;
+    box-shadow: 0 0 8px rgba(33,150,243,0.3);
+}
+
+/* Editor controls */
+.editor-controls {
+    width: 97%;
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: center;
+}
+
+.editor-btn {
+    background: #2196f3;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editor-btn:hover {
+    background: #1976d2;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
 ::-webkit-scrollbar { width: 8px; background: #e4e4e4; }
 ::-webkit-scrollbar-thumb { background: #add8ff; border-radius: 4px; }
 
@@ -364,4 +478,10 @@ progress::-webkit-progress-value {
     line-height: 1.4em;
     border-radius: 8px;
     color: #111;
+}
+
+/* Pin selection visual */
+.miniature.pin-selected {
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 20px #ffd70080 !important;
 }

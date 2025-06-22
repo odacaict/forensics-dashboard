@@ -1,0 +1,4 @@
+cautare.py
+contestatie.py
+generare.py
+ocr.py

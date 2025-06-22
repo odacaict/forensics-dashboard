@@ -2,7 +2,7 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
-    <title>Forensics Python Dashboard</title>
+    <title>Forensics Python Dashboard - Editor Integrat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -32,30 +32,32 @@
             </div>
             <div class="row">
                 <input type="file" accept=".py" id="secInput" class="hidden" multiple>
-                <button id="browseSec" title="Selectează scripturi secundare">Browse secundar</button>
-                <button id="loadSec" title="Încarcă scripturi secundare">Încarcă secundar</button>
+                <button id="browseSec" title="Selectează scripturi secundare (se adaugă la cele existente)">Browse secundar</button>
+                <button id="loadSec" title="Încarcă toate scripturile secundare selectate">Încarcă secundar</button>
             </div>
             <div class="sec-progress-grid" id="secProgressGrid"></div>
             <div class="row log-row">
                 <div id="messageLog" class="message-log"></div>
-                <button id="resetBtn" title="Reset" class="reset-btn">🧽</button>
-                <button id="pinBtn" title="Mod Pin (Conexiuni)" class="pin-btn">📌</button>
+                <button id="resetBtn" title="Reset complet" class="reset-btn">🧽</button>
+                <button id="pinBtn" title="Mod Pin - Creare conexiuni manuale" class="pin-btn">📌</button>
             </div>
         </div>
         <div class="sidebar-bottom">
-            <button id="butonStart">START</button>
-            <label class="raport-label">Afisaj raport</label>
+            <button id="butonStart">START ANALIZĂ</button>
+            <label class="raport-label">Raport analiză detaliată</label>
             <div id="raportBox" class="raport-box"></div>            
         </div>
     </div>
 </div>
 
-<!-- Modal pentru magnify -->
+<!-- Modal pentru magnify și editor -->
 <div id="modal" class="modal hidden">
     <div class="modal-content">
         <span class="close" id="closeModal">&times;</span>
         <input type="text" class="modal-filename" readonly>
         <pre class="modal-text"></pre>
+        <!-- Textarea pentru editor va fi adăugată dinamic -->
+        <!-- Controalele editorului vor fi adăugate dinamic -->
     </div>
 </div>
 
